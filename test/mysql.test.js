@@ -425,6 +425,19 @@ describe('mysql', function() {
     });
   });
 
+  it.only('should handle null in inq operator', function(done) {
+    Post.create({title: 'Foo', content: 'Bar'}, function(err, post) {
+      should.not.exist(err);
+      Post.find({where: {id: {inq: [null, 1]}}}, function(err, posts) {
+        should.not.exist(err);
+        posts.length.should.equal(1);
+        posts[0].title.should.equal('Foo');
+        posts[0].id.should.equal(1);
+        done();
+      });
+    });
+  });
+
   // The where object should be parsed by the connector
   it('should support where for count', function(done) {
     Post.create({title: 'My Post', content: 'Hello'}, function(err, post) {
