@@ -425,7 +425,7 @@ describe('mysql', function() {
     });
   });
 
-  it.only('should handle null in inq operator', function(done) {
+  it('should handle null in inq operator', function(done) {
     Post.create({title: 'Foo', content: 'Bar'}, function(err, post) {
       should.not.exist(err);
       Post.find({where: {id: {inq: [null, 1]}}}, function(err, posts) {
