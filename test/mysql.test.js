@@ -6,7 +6,7 @@
 'use strict';
 var should = require('./init.js');
 
-var Post, PostWithStringId, PostWithUniqueTitle, db;
+var Post, PostWithStringId, PostWithUniqueTitle, PostWithNumId, db;
 
 // Mock up mongodb ObjectID
 function ObjectID(id) {
@@ -41,13 +41,22 @@ describe('mysql', function() {
       title: {type: String, length: 255, index: true},
       content: {type: String},
     });
-
+    PostWithNumId = db.define('PostWithNumId', {
+      id: {type: Number, id: true},
+      title: {type: String, length: 255, index: true, default: 'test'},
+      content: {type: String, null: false, default: 'test'},
+      buffProp: {type: Buffer, null: false, default: new Buffer('test')},
+      objProp: {type: Object, null: false, default: {test: 'test'}},
+      arrProp: {type: [Number], null: false, default: ['test']},
+      dateProp: {type: Date, null: false, default: new Date()},
+      pointProp: {type: 'GeoPoint', null: false, default: {lng: 40, lat: 50}},
+    });
     PostWithUniqueTitle = db.define('PostWithUniqueTitle', {
       title: {type: String, length: 255, index: {unique: true}},
       content: {type: String},
     });
 
-    db.automigrate(['PostWithDefaultId', 'PostWithStringId', 'PostWithUniqueTitle'], function(err) {
+    db.automigrate(['PostWithDefaultId', 'PostWithStringId', 'PostWithUniqueTitle', 'PostWithNumId'], function(err) {
       should.not.exist(err);
       done(err);
     });
@@ -57,7 +66,9 @@ describe('mysql', function() {
     Post.destroyAll(function() {
       PostWithStringId.destroyAll(function() {
         PostWithUniqueTitle.destroyAll(function() {
-          done();
+          PostWithNumId.destroyAll(function() {
+            done();
+          });
         });
       });
     });
@@ -426,9 +437,9 @@ describe('mysql', function() {
   });
 
   it('should handle null in inq operator', function(done) {
-    Post.create({title: 'Foo', content: 'Bar'}, function(err, post) {
+    PostWithNumId.create({id: 1, title: 'Foo', content: 'Bar'}, function(err, post) {
       should.not.exist(err);
-      Post.find({where: {id: {inq: [null, 1]}}}, function(err, posts) {
+      PostWithNumId.find({where: {id: {inq: [null, 1]}}}, function(err, posts) {
         should.not.exist(err);
         posts.length.should.equal(1);
         posts[0].title.should.equal('Foo');
@@ -439,26 +450,58 @@ describe('mysql', function() {
   });
 
   it('should handle null in nin operator', function(done) {
-    Post.create({title: 'Make', content: 'Toyota'}, function(err, post) {
+    PostWithNumId.create({id: 2, title: 'Make', content: 'Toyota'}, function(err, post) {
       should.not.exist(err);
-      Post.find({where: {id: {nin: [null, 3]}}}, function(err, posts) {
+      PostWithNumId.find({where: {id: {nin: [null, 3]}}}, function(err, posts) {
         should.not.exist(err);
         posts.length.should.equal(1);
         posts[0].content.should.equal('Toyota');
-        posts[0].id.should.equal(1);
+        posts[0].id.should.equal(2);
         done();
       });
     });
   });
 
   it('should handle null in neq operator', function(done) {
-    Post.create({title: 'Model', content: 'Corolla'}, function(err, post) {
+    PostWithNumId.create({id: 3, title: 'Model', content: 'Corolla'}, function(err, post) {
       should.not.exist(err);
-      Post.find({where: {id: {neq: null}}}, function(err, posts) {
+      PostWithNumId.find({where: {id: {neq: null}}}, function(err, posts) {
         should.not.exist(err);
         posts.length.should.equal(1);
         posts[0].content.should.equal('Corolla');
-        posts[0].id.should.equal(1);
+        posts[0].id.should.equal(3);
+        done();
+      });
+    });
+  });
+
+  it('should handle null in inq op for different datatypes', function(done) {
+    var defaultPost = {
+      id: 0,
+      title: 'defTitle',
+      content: 'defContent',
+      buffProp: new Buffer('defBuffer'),
+      objProp: {defKey: 'defVal'},
+      arrProp: [0],
+      dateProp: new Date(),
+      pointProp: {lng: 4.51515, lat: 57.2314},
+    };
+
+    PostWithNumId.create(defaultPost, function(err, post) {
+      should.not.exist(err);
+      PostWithNumId.find({where: {and: [
+        {id: {inq: [null]}},
+        {title: {inq: [null]}},
+        {content: {inq: [null]}},
+        {buffProp: {inq: [null]}},
+        {objProp: {inq: [null]}},
+        {arrProp: {inq: [null]}},
+        {dateProp: {inq: [null]}},
+        {pointProp: {inq: [null]}},
+      ]}}, function(err, posts) {
+        //the main check here is that we produce a valid sql
+        should.not.exist(err);
+        posts.length.should.equal(0);
         done();
       });
     });
