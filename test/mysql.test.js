@@ -438,6 +438,32 @@ describe('mysql', function() {
     });
   });
 
+  it('should handle null in nin operator', function(done) {
+    Post.create({title: 'Make', content: 'Toyota'}, function(err, post) {
+      should.not.exist(err);
+      Post.find({where: {id: {nin: [null, 3]}}}, function(err, posts) {
+        should.not.exist(err);
+        posts.length.should.equal(1);
+        posts[0].content.should.equal('Toyota');
+        posts[0].id.should.equal(1);
+        done();
+      });
+    });
+  });
+
+  it('should handle null in neq operator', function(done) {
+    Post.create({title: 'Model', content: 'Corolla'}, function(err, post) {
+      should.not.exist(err);
+      Post.find({where: {id: {neq: null}}}, function(err, posts) {
+        should.not.exist(err);
+        posts.length.should.equal(1);
+        posts[0].content.should.equal('Corolla');
+        posts[0].id.should.equal(1);
+        done();
+      });
+    });
+  });
+
   // The where object should be parsed by the connector
   it('should support where for count', function(done) {
     Post.create({title: 'My Post', content: 'Hello'}, function(err, post) {
