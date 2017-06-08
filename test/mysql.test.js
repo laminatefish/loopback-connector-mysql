@@ -42,7 +42,7 @@ describe('mysql', function() {
       content: {type: String},
     });
     PostWithNumId = db.define('PostWithNumId', {
-      id: {type: Number, id: true},
+      id: {type: Number, id: true, null: false},
       title: {type: String, length: 255, index: true, default: 'test'},
       content: {type: String, null: false, default: 'test'},
       buffProp: {type: Buffer, null: false, default: new Buffer('test')},
@@ -66,9 +66,7 @@ describe('mysql', function() {
     Post.destroyAll(function() {
       PostWithStringId.destroyAll(function() {
         PostWithUniqueTitle.destroyAll(function() {
-          PostWithNumId.destroyAll(function() {
-            done();
-          });
+          PostWithNumId.destroyAll(done);
         });
       });
     });
@@ -475,33 +473,38 @@ describe('mysql', function() {
     });
   });
 
-  it('should handle null in inq op for different datatypes', function(done) {
+  it('should handle null in nin op for different datatypes', function(done) {
     var defaultPost = {
-      id: 0,
+      id: 3,
       title: 'defTitle',
       content: 'defContent',
       buffProp: new Buffer('defBuffer'),
       objProp: {defKey: 'defVal'},
       arrProp: [0],
-      dateProp: new Date(),
+      dateProp: new Date('11/12/2017'),
       pointProp: {lng: 4.51515, lat: 57.2314},
     };
 
     PostWithNumId.create(defaultPost, function(err, post) {
       should.not.exist(err);
       PostWithNumId.find({where: {and: [
-        {id: {inq: [null]}},
-        {title: {inq: [null]}},
-        {content: {inq: [null]}},
-        {buffProp: {inq: [null]}},
-        {objProp: {inq: [null]}},
-        {arrProp: {inq: [null]}},
-        {dateProp: {inq: [null]}},
-        {pointProp: {inq: [null]}},
+        {id: {nin: [null]}},
+        {title: {nin: [null]}},
+        {content: {nin: [null]}},
+        {buffProp: {nin: [null]}},
+        {objProp: {nin: [null]}},
+        {arrProp: {nin: [null]}},
+        {dateProp: {nin: [null]}},
+        {pointProp: {nin: [null]}},
       ]}}, function(err, posts) {
-        //the main check here is that we produce a valid sql
         should.not.exist(err);
-        posts.length.should.equal(0);
+        posts.length.should.equal(1);
+        posts[0].id.should.equal(defaultPost.id);
+        posts[0].title.should.equal(defaultPost.title);
+        posts[0].content.should.equal(defaultPost.content);
+        posts[0].buffProp.should.deepEqual(defaultPost.buffProp);
+        posts[0].objProp.should.deepEqual(defaultPost.objProp);
+        posts[0].pointProp.should.deepEqual(defaultPost.pointProp);
         done();
       });
     });
@@ -835,7 +838,9 @@ describe('mysql', function() {
   after(function(done) {
     Post.destroyAll(function() {
       PostWithStringId.destroyAll(function() {
-        PostWithUniqueTitle.destroyAll(done);
+        PostWithUniqueTitle.destroyAll(function() {
+          PostWithNumId.destroyAll(done);
+        });
       });
     });
   });
