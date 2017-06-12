@@ -43,13 +43,13 @@ describe('mysql', function() {
     });
     PostWithNumId = db.define('PostWithNumId', {
       id: {type: Number, id: true, null: false},
-      title: {type: String, length: 255, index: true, default: 'test'},
-      content: {type: String, null: false, default: 'test'},
-      buffProp: {type: Buffer, null: false, default: new Buffer('test')},
-      objProp: {type: Object, null: false, default: {test: 'test'}},
-      arrProp: {type: [Number], null: false, default: ['test']},
-      dateProp: {type: Date, null: false, default: new Date()},
-      pointProp: {type: 'GeoPoint', null: false, default: {lng: 40, lat: 50}},
+      title: {type: String, length: 255, null: false, index: true},
+      content: {type: String, null: false},
+      buffProp: {type: Buffer, null: false},
+      objProp: {type: Object, null: false},
+      arrProp: {type: [Number], null: false},
+      dateProp: {type: Date, null: false},
+      pointProp: {type: 'GeoPoint', null: false},
     });
     PostWithUniqueTitle = db.define('PostWithUniqueTitle', {
       title: {type: String, length: 255, index: {unique: true}},
@@ -65,9 +65,7 @@ describe('mysql', function() {
   beforeEach(function(done) {
     Post.destroyAll(function() {
       PostWithStringId.destroyAll(function() {
-        PostWithUniqueTitle.destroyAll(function() {
-          PostWithNumId.destroyAll(done);
-        });
+        PostWithUniqueTitle.destroyAll(done);
       });
     });
   });
@@ -433,47 +431,7 @@ describe('mysql', function() {
       });
     });
   });
-
-  it('should handle null in inq operator', function(done) {
-    PostWithNumId.create({id: 1, title: 'Foo', content: 'Bar'}, function(err, post) {
-      should.not.exist(err);
-      PostWithNumId.find({where: {id: {inq: [null, 1]}}}, function(err, posts) {
-        should.not.exist(err);
-        posts.length.should.equal(1);
-        posts[0].title.should.equal('Foo');
-        posts[0].id.should.equal(1);
-        done();
-      });
-    });
-  });
-
-  it('should handle null in nin operator', function(done) {
-    PostWithNumId.create({id: 2, title: 'Make', content: 'Toyota'}, function(err, post) {
-      should.not.exist(err);
-      PostWithNumId.find({where: {id: {nin: [null, 3]}}}, function(err, posts) {
-        should.not.exist(err);
-        posts.length.should.equal(1);
-        posts[0].content.should.equal('Toyota');
-        posts[0].id.should.equal(2);
-        done();
-      });
-    });
-  });
-
-  it('should handle null in neq operator', function(done) {
-    PostWithNumId.create({id: 3, title: 'Model', content: 'Corolla'}, function(err, post) {
-      should.not.exist(err);
-      PostWithNumId.find({where: {id: {neq: null}}}, function(err, posts) {
-        should.not.exist(err);
-        posts.length.should.equal(1);
-        posts[0].content.should.equal('Corolla');
-        posts[0].id.should.equal(3);
-        done();
-      });
-    });
-  });
-
-  it('should handle null in nin op for different datatypes', function(done) {
+  context('null vals in different operators', function() {
     var defaultPost = {
       id: 3,
       title: 'defTitle',
@@ -481,13 +439,71 @@ describe('mysql', function() {
       buffProp: new Buffer('defBuffer'),
       objProp: {defKey: 'defVal'},
       arrProp: [0],
-      dateProp: new Date('11/12/2017'),
+      dateProp: new Date(),
       pointProp: {lng: 4.51515, lat: 57.2314},
     };
+    beforeEach(function(done) {
+      PostWithNumId.destroyAll(done);
+    });
+    after(function(done) {
+      PostWithNumId.destroyAll(done);
+    });
+    it('should handle null in inq operator', function(done) {
+      defaultPost.id = 1;
+      defaultPost.title = 'Foo';
+      defaultPost.content = 'Bar';
+      PostWithNumId.create(defaultPost, function(err, post) {
+        should.not.exist(err);
+        post.id.should.equal(defaultPost.id);
+        PostWithNumId.find({where: {id: {inq: [null, 1]}}}, function(err, posts) {
+          should.not.exist(err);
+          posts.length.should.equal(1);
+          posts[0].title.should.equal('Foo');
+          posts[0].id.should.equal(1);
+          done();
+        });
+      });
+    });
 
-    PostWithNumId.create(defaultPost, function(err, post) {
-      should.not.exist(err);
-      PostWithNumId.find({where: {and: [
+    it('should handle null in nin operator', function(done) {
+      defaultPost.id = 2;
+      defaultPost.title = 'Make';
+      defaultPost.content = 'Toyota';
+      PostWithNumId.create(defaultPost, function(err, post) {
+        should.not.exist(err);
+        post.id.should.equal(defaultPost.id);
+        PostWithNumId.find({where: {id: {nin: [null, 3]}}}, function(err, posts) {
+          should.not.exist(err);
+          posts.length.should.equal(1);
+          posts[0].content.should.equal('Toyota');
+          posts[0].id.should.equal(2);
+          done();
+        });
+      });
+    });
+
+    it('should handle null in neq operator', function(done) {
+      defaultPost.id = 3;
+      defaultPost.title = 'Model';
+      defaultPost.content = 'Corolla';
+      PostWithNumId.create(defaultPost, function(err, post) {
+        should.not.exist(err);
+        post.id.should.equal(defaultPost.id);
+        PostWithNumId.find({where: {id: {neq: null}}}, function(err, posts) {
+          should.not.exist(err);
+          posts.length.should.equal(1);
+          posts[0].content.should.equal('Corolla');
+          posts[0].id.should.equal(3);
+          done();
+        });
+      });
+    });
+
+    it('should handle null in nin op for different datatypes', function(done) {
+      PostWithNumId.create(defaultPost, function(err, post) {
+        should.not.exist(err);
+        post.id.should.equal(defaultPost.id);
+        PostWithNumId.find({where: {and: [
         {id: {nin: [null]}},
         {title: {nin: [null]}},
         {content: {nin: [null]}},
@@ -496,16 +512,17 @@ describe('mysql', function() {
         {arrProp: {nin: [null]}},
         {dateProp: {nin: [null]}},
         {pointProp: {nin: [null]}},
-      ]}}, function(err, posts) {
-        should.not.exist(err);
-        posts.length.should.equal(1);
-        posts[0].id.should.equal(defaultPost.id);
-        posts[0].title.should.equal(defaultPost.title);
-        posts[0].content.should.equal(defaultPost.content);
-        posts[0].buffProp.should.deepEqual(defaultPost.buffProp);
-        posts[0].objProp.should.deepEqual(defaultPost.objProp);
-        posts[0].pointProp.should.deepEqual(defaultPost.pointProp);
-        done();
+        ]}}, function(err, posts) {
+          should.not.exist(err);
+          posts.length.should.equal(1);
+          posts[0].id.should.equal(defaultPost.id);
+          posts[0].title.should.equal(defaultPost.title);
+          posts[0].content.should.equal(defaultPost.content);
+          posts[0].buffProp.should.deepEqual(defaultPost.buffProp);
+          posts[0].objProp.should.deepEqual(defaultPost.objProp);
+          posts[0].pointProp.should.deepEqual(defaultPost.pointProp);
+          done();
+        });
       });
     });
   });
@@ -838,9 +855,7 @@ describe('mysql', function() {
   after(function(done) {
     Post.destroyAll(function() {
       PostWithStringId.destroyAll(function() {
-        PostWithUniqueTitle.destroyAll(function() {
-          PostWithNumId.destroyAll(done);
-        });
+        PostWithUniqueTitle.destroyAll(done);
       });
     });
   });
